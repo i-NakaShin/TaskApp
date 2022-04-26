@@ -12,24 +12,17 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <EditText
-            android:id="@+id/search_edit_text"
-            android:layout_width="260dp"
-            android:layout_height="wrap_content"
-            android:hint="カテゴリー検索" />
-
-        <Button
-            android:id="@+id/search_button"
-            android:layout_width="96dp"
-            android:layout_height="wrap_content"
-            android:layout_toRightOf="@+id/search_edit_text"
-            android:text="検索" />
+        <Spinner
+            android:id="@+id/category_spinner"
+            android:layout_width="150dp"
+            android:layout_height="50dp"
+            android:layout_alignEnd="@+id/listView1" />
 
         <ListView
             android:id="@+id/listView1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@+id/search_edit_text"/>
+            android:layout_below="@+id/category_spinner" />
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab"
@@ -39,7 +32,7 @@
             android:layout_alignParentBottom="true"
             android:layout_margin="16dp"
             android:src="@drawable/plus"
-            app:backgroundTint="@color/colorPrimary"/>
+            app:backgroundTint="@color/colorPrimary" />
 
     </RelativeLayout>
 

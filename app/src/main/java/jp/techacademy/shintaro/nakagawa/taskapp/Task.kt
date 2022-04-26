@@ -8,8 +8,8 @@ import io.realm.annotations.PrimaryKey
 open class Task : RealmObject(), Serializable {
     var title: String = ""      // タイトル
     var contents: String = ""   // 内容
-    var category: String = ""   // カテゴリー
     var date: Date = Date()     // 日時
+    var categoryId: Int = 0
 
     // idをプライマリーキーとして設定
     @PrimaryKey

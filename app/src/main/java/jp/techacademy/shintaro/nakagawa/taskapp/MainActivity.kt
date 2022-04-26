@@ -11,14 +11,31 @@ import androidx.appcompat.app.AlertDialog
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.util.Log
+import android.view.View
+import android.widget.*
+import io.realm.RealmConfiguration
 
 const val EXTRA_TASK = "jp.techacademy.shintaro.nakagawa.taskapp.TASK"
 
 class MainActivity : AppCompatActivity() {
+
+    var isFirstOpened = true
+
     private lateinit var mRealm: Realm
     private val mRealmListener = object : RealmChangeListener<Realm> {
         override fun onChange(element: Realm) {
             reloadListView()
+        }
+    }
+
+    private val cConfig = RealmConfiguration.Builder()
+                    .name("Category.realm")
+                    .schemaVersion(1)
+                    .build()
+    private lateinit var cRealm: Realm
+    private val cRealmListener = object : RealmChangeListener<Realm> {
+        override fun onChange(element: Realm) {
+            reloadSpinner()
         }
     }
 
@@ -28,16 +45,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        Log.d("kotlintest", "onCreate")
-
-        fab.setOnClickListener { view ->
+        fab.setOnClickListener {
             val intent = Intent(this, InputActivity::class.java)
+            Log.d("kotlintest", "fabClick")
             startActivity(intent)
         }
 
         // Realmの設定
         mRealm = Realm.getDefaultInstance()
         mRealm.addChangeListener(mRealmListener)
+        cRealm = Realm.getInstance(cConfig)
+        cRealm.addChangeListener(cRealmListener)
 
         // ListViewの設定
         mTaskAdapter = TaskAdapter(this)
@@ -91,11 +109,8 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
-        search_button.setOnClickListener {
-            searchCategory()
-        }
-
         reloadListView()
+        reloadSpinner()
     }
 
     private fun reloadListView() {
@@ -116,26 +131,75 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
 
         mRealm.close()
+        cRealm.close()
     }
 
-    private fun searchCategory() {
-
-        if (!search_edit_text.text.isNullOrBlank()) {
-            val category = search_edit_text.text.toString()
-            val taskRealmResults =
-                mRealm.where(Task::class.java).equalTo("category", category).findAll()
-                    .sort("date", Sort.DESCENDING)
-
-            // 上記の結果を、TaskListとしてセットする
-            mTaskAdapter.mTaskList = mRealm.copyFromRealm(taskRealmResults)
-
-            // TaskのListView用のアダプタに渡す
-            listView1.adapter = mTaskAdapter
-
-            // 表示を更新するために、アダプターにデータが変更されたことを知らせる
-            mTaskAdapter.notifyDataSetChanged()
+    private fun searchCategory(categoryId: Int) {
+        var taskRealmResults: Any? = null
+        if (categoryId == 0) {
+            taskRealmResults = mRealm.where(Task::class.java).findAll()
+                .sort("date")
         } else {
-            reloadListView()
+            taskRealmResults = mRealm.where(Task::class.java).equalTo("categoryId", categoryId).findAll()
+                .sort("date")
+        }
+
+        // 上記の結果を、TaskListとしてセットする
+        mTaskAdapter.mTaskList = mRealm.copyFromRealm(taskRealmResults)
+
+        // TaskのListView用のアダプタに渡す
+        listView1.adapter = mTaskAdapter
+
+        // 表示を更新するために、アダプターにデータが変更されたことを知らせる
+        mTaskAdapter.notifyDataSetChanged()
+
+    }
+
+    private fun reloadSpinner() {
+        var spinnerItems = cRealm.where(Category::class.java).findAll()
+        val category = Category()
+        var spinnerArray = arrayListOf<String>()
+        var cId: Category? = null
+
+        if (spinnerItems.isNullOrEmpty()) {
+            category.category = "All"
+            category.id = 0
+            cRealm.beginTransaction()
+            cRealm.copyToRealmOrUpdate(category)
+            cRealm.commitTransaction()
+            isFirstOpened = false
+        }
+
+        if (isFirstOpened) {
+            spinnerItems = cRealm.where(Category::class.java).findAll()
+        }
+
+        for (num in spinnerItems) {
+            spinnerArray.add(num.category)
+        }
+
+        // ArrayAdapter
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, spinnerArray)
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // spinner に adapter をセット
+        category_spinner.adapter = adapter
+
+        category_spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
+            //　アイテムが選択された時
+            override fun onItemSelected(parent: AdapterView<*>?,
+                                        view: View?, position: Int, id: Long) {
+                val spinnerParent = parent as Spinner
+                val item = spinnerParent.selectedItem as String
+                val cId = cRealm.where(Category::class.java).equalTo("category", item).findAll()
+                searchCategory(cId.max("id")!!.toInt())
+            }
+
+            //　アイテムが選択されなかった
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                //
+            }
         }
     }
 }

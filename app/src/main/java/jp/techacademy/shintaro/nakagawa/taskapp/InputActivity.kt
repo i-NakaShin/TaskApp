@@ -13,6 +13,12 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Intent
 import android.util.Log
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.Spinner
+import io.realm.RealmConfiguration
+import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.content_input.category_spinner2
 
 class InputActivity : AppCompatActivity() {
 
@@ -22,6 +28,13 @@ class InputActivity : AppCompatActivity() {
     private var mHour = 0
     private var mMinute = 0
     private var mTask: Task? = null
+    private lateinit var sCategory: Category
+    private val cConfig = RealmConfiguration.Builder()
+        .name("Category.realm")
+        .schemaVersion(1)
+        .build()
+    private lateinit var cRealm: Realm
+    var numId: Long = 0
 
     private val mOnDateClickListener = View.OnClickListener {
         val datePickerDialog = DatePickerDialog(this,
@@ -48,7 +61,13 @@ class InputActivity : AppCompatActivity() {
 
     private val mOnDoneClickListener = View.OnClickListener {
         addTask()
-        finish()
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
+    }
+
+    private val mOnCategoryClickListener = View.OnClickListener {
+        val intent = Intent(this, AddCategory::class.java)
+        startActivity(intent)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,6 +85,7 @@ class InputActivity : AppCompatActivity() {
         date_button.setOnClickListener(mOnDateClickListener)
         times_button.setOnClickListener(mOnTimeClickListener)
         done_button.setOnClickListener(mOnDoneClickListener)
+        editCategory_button.setOnClickListener(mOnCategoryClickListener)
 
         // EXTRA_TASKからTaskのidを取得して、 idからTaskのインスタンスを取得する
         val intent = intent
@@ -73,6 +93,11 @@ class InputActivity : AppCompatActivity() {
         val realm = Realm.getDefaultInstance()
         mTask = realm.where(Task::class.java).equalTo("id", taskId).findFirst()
         realm.close()
+        val cConfig = RealmConfiguration.Builder()
+            .name("Category.realm")
+            .schemaVersion(1)
+            .build()
+        cRealm = Realm.getInstance(cConfig)
 
         if (mTask == null) {
             // 新規作成の場合
@@ -86,7 +111,7 @@ class InputActivity : AppCompatActivity() {
             // 更新の場合
             title_edit_text.setText(mTask!!.title)
             content_edit_text.setText(mTask!!.contents)
-            category_edit_text.setText(mTask!!.category)
+
 
             val calendar = Calendar.getInstance()
             calendar.time = mTask!!.date
@@ -102,6 +127,8 @@ class InputActivity : AppCompatActivity() {
             date_button.text = dateString
             times_button.text = timeString
         }
+
+        reloadSpinner()
     }
 
     private fun addTask() {
@@ -126,11 +153,12 @@ class InputActivity : AppCompatActivity() {
 
         val title = title_edit_text.text.toString()
         val content = content_edit_text.text.toString()
-        val category = category_edit_text.text.toString()
+
 
         mTask!!.title = title
         mTask!!.contents = content
-        mTask!!.category = category
+        mTask!!.categoryId = numId.toInt()
+
         val calendar = GregorianCalendar(mYear, mMonth, mDay, mHour, mMinute)
         val date = calendar.time
         mTask!!.date = date
@@ -151,5 +179,36 @@ class InputActivity : AppCompatActivity() {
 
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
         alarmManager.set(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, resultPendingIntent)
+    }
+
+    private fun reloadSpinner() {
+        val spinnerItems = cRealm.where(Category::class.java).findAll()
+        val category = Category()
+        var spinnerArray: Array<String?> = arrayOfNulls(spinnerItems.size)
+
+        for (num in spinnerItems) {
+            spinnerArray[num.id] = num.category
+        }
+
+        // ArrayAdapter
+        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, spinnerArray)
+
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+
+        // spinner に adapter をセット
+        category_spinner2.adapter = adapter
+
+        category_spinner2.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
+            //　アイテムが選択された時
+            override fun onItemSelected(parent: AdapterView<*>?,
+                                        view: View?, position: Int, id: Long) {
+                numId = id
+            }
+
+            //　アイテムが選択されなかった
+            override fun onNothingSelected(parent: AdapterView<*>?) {
+                //
+            }
+        }
     }
 }

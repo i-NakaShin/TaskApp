@@ -99,6 +99,8 @@ class InputActivity : AppCompatActivity() {
             .build()
         cRealm = Realm.getInstance(cConfig)
 
+        reloadSpinner()
+
         if (mTask == null) {
             // 新規作成の場合
             val calendar = Calendar.getInstance()
@@ -111,7 +113,7 @@ class InputActivity : AppCompatActivity() {
             // 更新の場合
             title_edit_text.setText(mTask!!.title)
             content_edit_text.setText(mTask!!.contents)
-
+            category_spinner2.setSelection(mTask!!.categoryId)
 
             val calendar = Calendar.getInstance()
             calendar.time = mTask!!.date
@@ -127,8 +129,6 @@ class InputActivity : AppCompatActivity() {
             date_button.text = dateString
             times_button.text = timeString
         }
-
-        reloadSpinner()
     }
 
     private fun addTask() {
